@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activation Screen</title>
+    <!-- MDB CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.10.2/mdb.min.css" rel="stylesheet">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.10.2/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <div class="container mt-5" x-data="activationApp()">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Activate Your Account</h5>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" :style="'width: ' + (step * 33.33) + '%'" :aria-valuenow="step * 33.33" aria-valuemin="0" aria-valuemax="100">
+                        Step <span x-text="step"></span> of 3
+                    </div>
+                </div>
+                <template x-if="activationCode">
+                    <div class="mt-3">
+                        <p style="font-size: 2em; font-weight: bold;">Activation Code: <span x-text="activationCode"></span></p>
+                    </div>
+                </template>
+                <template x-if="step === 1">
+                    <div>
+                        <p class="card-text">Please select an option to proceed:</p>
+                        <div class="btn-group" role="group" aria-label="Activation Options">
+                            <button type="button" class="btn btn-primary" @click="selectOption(1)">Option 1</button>
+                            <button type="button" class="btn btn-primary" @click="selectOption(2)">Option 2</button>
+                            <button type="button" class="btn btn-primary" @click="selectOption(3)">Option 3</button>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="step === 2">
+                    <div class="mt-3">
+                        <p>Price in USD: $<span x-text="selectedOption * 10"></span></p>
+                        <button type="button" class="btn btn-success" @click="activate()">Activate</button>
+                    </div>
+                </template>
+                <template x-if="step === 3">
+                    <div class="mt-3">
+                        <p>Activation complete! Your selected option was <span x-text="selectedOption"></span>.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function activationApp() {
+            return {
+                step: 1,
+                selectedOption: null,
+                activationCode: new URLSearchParams(window.location.search).get('code'),
+                init() {
+                    window.addEventListener('popstate', (event) => {
+                        if (event.state) {
+                            this.step = event.state.step;
+                            this.selectedOption = event.state.selectedOption;
+                        }
+                    });
+                    this.pushState();
+                },
+                selectOption(value) {
+                    this.selectedOption = value;
+                    this.step = 2;
+                    this.pushState();
+                },
+                activate() {
+                    this.step = 3;
+                    this.replaceState();
+                },
+                pushState() {
+                    window.history.pushState({ step: this.step, selectedOption: this.selectedOption }, '', '');
+                },
+                replaceState() {
+                    window.history.replaceState({ step: this.step, selectedOption: this.selectedOption }, '', '');
+                    window.location.replace(window.location.href); // Replace current history entry
+                }
+            };
+        }
+    </script>
+    <!-- MDB JS -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.10.2/mdb.min.js"></script>
+</body>
+</html>
