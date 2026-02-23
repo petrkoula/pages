@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aktivity v okolí Mitterdorfu – mapa</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --color-cream-50: rgba(252, 252, 249, 1);
+      --color-cream-100: rgba(255, 255, 253, 1);
+      --color-charcoal-700: rgba(31, 33, 33, 1);
+      --color-charcoal-800: rgba(38, 40, 40, 1);
+      --color-gray-200: rgba(245, 245, 245, 1);
+      --color-gray-300: rgba(167, 169, 169, 1);
+      --color-gray-400: rgba(119, 124, 124, 1);
+      --color-slate-500: rgba(98, 108, 113, 1);
+      --color-slate-900: rgba(19, 52, 59, 1);
+      --color-teal-300: rgba(50, 184, 198, 1);
+      --color-teal-500: rgba(33, 128, 141, 1);
+      --color-teal-600: rgba(29, 116, 128, 1);
+
+      --color-brown-600-rgb: 94, 82, 64;
+      --color-teal-500-rgb: 33, 128, 141;
+      --color-gray-400-rgb: 119, 124, 124;
+      --color-gray-300-rgb: 167, 169, 169;
+      --color-gray-200-rgb: 245, 245, 245;
+      --color-teal-300-rgb: 50, 184, 198;
+
+      --color-background: var(--color-cream-50);
+      --color-surface: var(--color-cream-100);
+      --color-text: var(--color-slate-900);
+      --color-text-secondary: var(--color-slate-500);
+      --color-primary: var(--color-teal-500);
+      --color-primary-hover: var(--color-teal-600);
+      --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+      --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+
+      --font-family-base: "FKGroteskNeue", "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      --radius-lg: 12px;
+      --radius-base: 8px;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02);
+      --focus-ring: 0 0 0 3px rgba(var(--color-teal-500-rgb), 0.35);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-background: var(--color-charcoal-700);
+        --color-surface: var(--color-charcoal-800);
+        --color-text: var(--color-gray-200);
+        --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
+        --color-primary: var(--color-teal-300);
+        --color-primary-hover: rgba(50, 184, 198, 0.8);
+        --color-border: rgba(var(--color-gray-400-rgb), 0.3);
+        --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
+        --focus-ring: 0 0 0 3px rgba(var(--color-teal-300-rgb), 0.35);
+      }
+    }
+
+    @font-face {
+      font-family: "FKGroteskNeue";
+      src: url("https://r2cdn.perplexity.ai/fonts/FKGroteskNeue.woff2") format("woff2");
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family-base);
+      background: var(--color-background);
+      color: var(--color-text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 16px 20px;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-card-border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    header .icon { font-size: 26px; }
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+    header p {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin: 2px 0 0 0;
+    }
+
+    .main-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 390px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-card-border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-card-border);
+      display: grid;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--color-text);
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: var(--radius-base);
+      border: 1px solid var(--color-border);
+      background: var(--color-background);
+      color: var(--color-text);
+      outline: none;
+      font-size: 13px;
+    }
+    .field input:focus {
+      box-shadow: var(--focus-ring);
+      border-color: var(--color-primary);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      font-family: var(--font-family-base);
+    }
+    .btn:hover {
+      background: rgba(var(--color-teal-500-rgb), 0.08);
+      border-color: var(--color-primary);
+    }
+    .btn.primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: white;
+    }
+    @media (prefers-color-scheme: dark) {
+      .btn.primary { color: var(--color-charcoal-700); }
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+      line-height: 1.35;
+    }
+
+    .filter-bar {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--color-card-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .filter-btn {
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      font-family: var(--font-family-base);
+      font-weight: 600;
+    }
+    .filter-btn:hover {
+      background: rgba(var(--color-teal-500-rgb), 0.08);
+      border-color: var(--color-primary);
+    }
+    .filter-btn.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: white;
+    }
+    @media (prefers-color-scheme: dark) {
+      .filter-btn.active { color: var(--color-charcoal-700); }
+    }
+
+    .poi-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .poi-item {
+      padding: 14px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-card-border);
+      transition: background 0.15s ease;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .poi-item:hover {
+      background: rgba(var(--color-teal-500-rgb), 0.05);
+    }
+    .poi-item.selected {
+      background: rgba(var(--color-teal-500-rgb), 0.10);
+      border-left: 3px solid var(--color-primary);
+      padding-left: 13px;
+    }
+
+    .poi-emoji {
+      font-size: 22px;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(var(--color-teal-500-rgb), 0.08);
+    }
+
+    .poi-info { flex: 1; min-width: 0; }
+    .poi-name {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.01em;
+    }
+    .poi-desc {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin: 0 0 8px 0;
+      line-height: 1.45;
+    }
+
+    .poi-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .poi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      border: 1px solid var(--color-card-border);
+      background: var(--color-background);
+      color: var(--color-text-secondary);
+    }
+    .badge-distance {
+      border: 1px solid rgba(var(--color-teal-500-rgb), 0.25);
+      background: rgba(var(--color-teal-500-rgb), 0.10);
+      color: var(--color-primary);
+    }
+
+    details.links {
+      border: 1px solid var(--color-card-border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: var(--color-background);
+    }
+    details.links summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--color-text);
+      outline: none;
+      list-style: none;
+    }
+    details.links summary::-webkit-details-marker { display: none; }
+    details.links summary:focus-visible {
+      box-shadow: var(--focus-ring);
+      border-radius: 8px;
+    }
+    .links-inner {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .links-inner a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      text-decoration: none;
+      color: var(--color-primary);
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(var(--color-teal-500-rgb), 0.25);
+      background: rgba(var(--color-teal-500-rgb), 0.06);
+    }
+    .links-inner a:hover {
+      background: rgba(var(--color-teal-500-rgb), 0.10);
+      border-color: var(--color-primary);
+    }
+
+    #map { flex: 1; min-height: 0; }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-lg) !important;
+      padding: 0 !important;
+    }
+    .leaflet-popup-content {
+      margin: 0 !important;
+      min-width: 260px;
+      max-width: 320px;
+      font-family: var(--font-family-base);
+    }
+    .popup-inner { padding: 14px 14px; background: var(--color-surface); color: var(--color-text); }
+    .popup-inner h3 { font-size: 15px; margin: 0 0 6px 0; letter-spacing: -0.01em; }
+    .popup-inner p { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 10px 0; line-height: 1.45; }
+    .popup-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .popup-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      border: 1px solid var(--color-card-border);
+      background: var(--color-background);
+      color: var(--color-text-secondary);
+    }
+    .popup-badge.dist {
+      border: 1px solid rgba(var(--color-teal-500-rgb), 0.25);
+      background: rgba(var(--color-teal-500-rgb), 0.10);
+      color: var(--color-primary);
+    }
+
+    @media (max-width: 768px) {
+      .main-wrapper { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        max-height: 52vh;
+        border-right: none;
+        border-bottom: 1px solid var(--color-card-border);
+      }
+      #map { min-height: 48vh; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="icon">🗺️</div>
+  <div>
+    <h1>Aktivity v okolí Mitterdorfu</h1>
+    <p>Start: Sporthotel Mitterdorf (Schmelzler Straße 47)</p>
+  </div>
+</header>
+
+<div class="main-wrapper">
+  <aside class="sidebar">
+    <div class="panel" aria-label="Nastavení výchozího místa">
+      <div class="field">
+        <label for="originAddress">Výchozí adresa (hotel)</label>
+        <input id="originAddress" type="text" value="Sporthotel Mitterdorf, Schmelzler Straße 47, 94158 Philippsreut, Germany" />
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnGeocode" type="button">Najít na mapě</button>
+        <button class="btn" id="btnCenter" type="button">Vycentrovat</button>
+      </div>
+      <div class="hint" id="originStatus">Pozn.: Vzdálenosti jsou orientačně „vzdušnou čarou“. Spojnice jsou přímky (ne navigace po silnici).</div>
+    </div>
+
+    <div class="filter-bar" id="filterBar"></div>
+    <div class="poi-list" id="poiList"></div>
+  </aside>
+
+  <div id="map"></div>
+</div>
+
+<script>
+  // --- Data ---
+  const origin = {
+    id: "origin",
+    name: "Sporthotel Mitterdorf",
+    address: "Schmelzler Straße 47, 94158 Philippsreut, Germany",
+    // Fallback souřadnice (pokud geokódování selže); po „Najít na mapě“ se aktualizují z Nominatim.
+    lat: 48.8333,
+    lon: 13.5833,
+    emoji: "🏨",
+    type: "origin",
+    category: "Výchozí místo",
+    desc: "Ubytování / startovní bod.",
+    officialUrl: "https://www.hrs.com/en/hotel/57010",
+    otherUrl: "https://www.kayak.co.uk/Mitterfirmiansreut-Hotels-Hotel-Mitterdorf.373158.ksp",
+    officialLabel: "Info (HRS)",
+    otherLabel: "Recenze (Kayak)"
+  };
+
+  const pois = [
+    {
+      id: 1,
+      name: "Ski areál Almberg/Mitterdorf",
+      lat: 48.8333, lon: 13.5833,
+      type: "ski",
+      emoji: "⛷️",
+      category: "Areál",
+      desc: "Lyžařský areál Almberg u Mitterfirmiansreut (Mitterdorf).",
+      officialUrl: "https://www.mitterdorf.info",
+      otherUrl: "https://www.bergfex.cz/mitterdorf/",
+      officialLabel: "Oficiální",
+      otherLabel: "Info (Bergfex)"
+    },
+    {
+      id: 2,
+      name: "Baumwipfelpfad (Neuschönau)",
+      lat: 48.8975, lon: 13.4908,
+      type: "nature",
+      emoji: "🌲",
+      category: "Příroda",
+      desc: "Stezka korunami stromů s vyhlídkovou věží (celoročně).",
+      officialUrl: "https://treetop-walks.com/bayerischer-wald/",
+      otherUrl: "https://www.nationalpark-ferienland-bayerischer-wald.de/baumwipfelpfad/",
+      officialLabel: "Oficiální",
+      otherLabel: "Tipy (region)"
+    },
+    {
+      id: 3,
+      name: "Hans-Eisenmann-Haus (NPZ Lusen)",
+      lat: 48.8969, lon: 13.4922,
+      type: "culture",
+      emoji: "🦉",
+      category: "Kultura / indoor",
+      desc: "Návštěvnické centrum v NP Bavorský les (výstava, kino, „Waldwerkstatt“).",
+      officialUrl: "https://erlebe.bayern/urlaub-fuer-alle/hans-eisenmann-haus-nationalparkzentrum-lusen/",
+      otherUrl: "https://www.bayerischer-wald.de/attraktion/nationalparkzentrum-lusen-9d975d895f",
+      officialLabel: "Oficiální info",
+      otherLabel: "Info (Bayerischer-Wald.de)"
+    },
+    {
+      id: 4,
+      name: "Třístoličník / Dreisesselberg",
+      lat: 48.7725, lon: 13.7933,
+      type: "nature",
+      emoji: "🥾",
+      category: "Příroda",
+      desc: "Hraniční vrchol (1 312 m) – výhledy, zimní turistika.",
+      officialUrl: "https://haidmuehle.eu",
+      otherUrl: "https://www.nationalpark-ferienland-bayerischer-wald.de/der-dreisessel-1-312-m-mit-hochsteinfelsen/",
+      officialLabel: "Obec Haidmühle",
+      otherLabel: "Trasa/tipy (region)"
+    },
+    {
+      id: 5,
+      name: "Karoli-Badepark (Waldkirchen)",
+      lat: 48.7297, lon: 13.6017,
+      type: "indoor",
+      emoji: "🏊",
+      category: "Indoor / wellness",
+      desc: "Aquapark s krytým bazénem, saunou a Mediterraneem (termální slaná voda).",
+      officialUrl: "https://urlaub-in-waldkirchen.de/badepark/",
+      otherUrl: "https://www.bayerischer-wald.de/attraktion/karoli-badepark-7637627496",
+      officialLabel: "Oficiální",
+      otherLabel: "Info (Bayerischer-Wald.de)"
+    },
+    {
+      id: 6,
+      name: "Karoli Eissporthalle (Waldkirchen)",
+      lat: 48.7310, lon: 13.5985,
+      type: "indoor",
+      emoji: "⛸️",
+      category: "Indoor",
+      desc: "Krytá ledová hala – veřejné bruslení a Eisstockschießen.",
+      officialUrl: "https://urlaub-in-waldkirchen.de/karoli-welt/",
+      otherUrl: "https://urlaub-in-waldkirchen.de/cs/aktivity-zima/",
+      officialLabel: "Oficiální",
+      otherLabel: "Tipy (město)"
+    },
+    {
+      id: 7,
+      name: "BOLZWERK (Spiegelau)",
+      lat: 48.9153, lon: 13.3631,
+      type: "indoor",
+      emoji: "🧗",
+      category: "Indoor",
+      desc: "Indoor sporty, fun area, sportsbar (výborné při špatném počasí).",
+      officialUrl: "https://www.bolzwerk.com",
+      otherUrl: "https://www.bayerwoid.de/listing/bolzwerk-spiegelau/",
+      officialLabel: "Oficiální",
+      otherLabel: "Listing (bayerwoid)"
+    },
+    {
+      id: 8,
+      name: "Glasmuseum Frauenau",
+      lat: 48.9889, lon: 13.3011,
+      type: "culture",
+      emoji: "🎨",
+      category: "Kultura / muzea",
+      desc: "Státní muzeum sklářské kultury – stálá expozice i výstavy.",
+      officialUrl: "https://glasmuseum-frauenau.de",
+      otherUrl: "https://museen-in-bayern.de/en/museums/museum-details/glasmuseum-frauenau",
+      officialLabel: "Oficiální",
+      otherLabel: "Profil (Museen in Bayern)"
+    },
+    {
+      id: 9,
+      name: "Schloss Wolfstein (Freyung)",
+      lat: 48.8083, lon: 13.5483,
+      type: "culture",
+      emoji: "🏰",
+      category: "Kultura / muzea",
+      desc: "Schlossmuseum / Jagd-Land-Fluss – moderní a interaktivní expozice.",
+      officialUrl: "https://www.freyung.de/de/kultur-und-kulinarik/sehenswertes/schloss-wolfstein-mit-museum.html",
+      otherUrl: "https://www.alpen-guide.de/reisefuehrer/poi/schloss-wolfstein-freyung",
+      officialLabel: "Oficiální (Freyung)",
+      otherLabel: "Info (Alpen-Guide)"
+    },
+    {
+      id: 10,
+      name: "Passau – město tří řek",
+      lat: 48.5734, lon: 13.4631,
+      type: "city",
+      emoji: "🏛️",
+      category: "Město",
+      desc: "Historické centrum, soutok Dunaje/Innu/Ilze, památky a kavárny.",
+      officialUrl: "https://tourism.passau.de",
+      otherUrl: "https://www.germany.travel/en/cities-culture/passau.html",
+      officialLabel: "Oficiální tourism",
+      otherLabel: "Inspirace (Germany Travel)"
+    },
+    {
+      id: 11,
+      name: "Jízda na saních s koňmi (okolí Freyungu)",
+      lat: 48.8100, lon: 13.5500,
+      type: "nature",
+      emoji: "🐴",
+      category: "Příroda",
+      desc: "Zimní romantika – projížďka na saních tažených koňmi (dle nabídky v okolí).",
+      officialUrl: "https://www.freyung.de/de/langlaufen-und-winterspor/winteraktiv.html",
+      otherUrl: "https://www.getyourguide.com/cs-cz/zemsky-okres-freyung-grafenau-l207500/",
+      officialLabel: "Tipy (Freyung)",
+      otherLabel: "Aktivity (GetYourGuide)"
+    }
+  ];
+
+  const categories = [
+    { key: "all", label: "Vše", emoji: "📍" },
+    { key: "nature", label: "Příroda", emoji: "🌲" },
+    { key: "indoor", label: "Indoor", emoji: "🏊" },
+    { key: "culture", label: "Kultura", emoji: "🎨" },
+    { key: "city", label: "Město", emoji: "🏛️" },
+    { key: "ski", label: "Areál", emoji: "⛷️" }
+  ];
+
+  const markerColors = {
+    origin: "#e74c3c",
+    ski: "#c0392b",
+    nature: "#27ae60",
+    indoor: "#2980b9",
+    culture: "#8e44ad",
+    city: "#e67e22"
+  };
+
+  let activeFilter = "all";
+  let selectedId = origin.id;
+
+  const markers = {};
+  const linesLayer = L.layerGroup();
+
+  // --- Map ---
+  const map = L.map("map", { zoomControl: true }).setView([origin.lat, origin.lon], 11);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener noreferrer\">OpenStreetMap</a>",
+    maxZoom: 18
+  }).addTo(map);
+
+  linesLayer.addTo(map);
+
+  function createIcon(p) {
+    const color = markerColors[p.type] || "#21808d";
+    const isOrigin = p.id === "origin";
+    const size = isOrigin ? 42 : 32;
+    return L.divIcon({
+      className: "custom-marker",
+      html: `<div style="
+        width:${size}px;height:${size}px;border-radius:50%;
+        background:${color};
+        border:3px solid white;
+        box-shadow:0 2px 8px rgba(0,0,0,0.30);
+        display:flex;align-items:center;justify-content:center;
+        font-size:${isOrigin ? 18 : 15}px;
+      ">${p.emoji}</div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+      popupAnchor: [0, -(size/2) - 4]
+    });
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  function computeKmTo(p) {
+    if (p.id === "origin") return 0;
+    const km = haversineKm(origin.lat, origin.lon, p.lat, p.lon);
+    return Math.round(km * 10) / 10;
+  }
+
+  function safeUrl(u) {
+    try {
+      const url = new URL(u);
+      if (url.protocol === "http:" || url.protocol === "https:") return url.toString();
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  function popupHtml(p) {
+    const km = computeKmTo(p);
+    const distText = p.id === "origin" ? "📍 Start" : `🚗 cca ${km} km`;
+    return `
+      <div class="popup-inner">
+        <h3>${p.emoji} ${p.name}</h3>
+        <p>${p.desc}</p>
+        <div class="popup-badges">
+          <span class="popup-badge dist">${distText}</span>
+          <span class="popup-badge">${p.category}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- Markers ---
+  function addOrUpdateMarker(p) {
+    const latlng = [p.lat, p.lon];
+    if (!markers[p.id]) {
+      const marker = L.marker(latlng, { icon: createIcon(p) })
+        .bindPopup(popupHtml(p), { maxWidth: 320 });
+      marker.on("click", () => {
+        selectedId = p.id;
+        renderList();
+      });
+      markers[p.id] = marker;
+      marker.addTo(map);
+    } else {
+      markers[p.id].setLatLng(latlng);
+      markers[p.id].setIcon(createIcon(p));
+      markers[p.id].setPopupContent(popupHtml(p));
+    }
+  }
+
+  addOrUpdateMarker(origin);
+  pois.forEach(addOrUpdateMarker);
+
+  // --- Lines from origin ---
+  function redrawLines() {
+    linesLayer.clearLayers();
+    const visible = getVisiblePoints().filter(p => p.id !== "origin");
+
+    visible.forEach(p => {
+      const line = L.polyline(
+        [[origin.lat, origin.lon], [p.lat, p.lon]],
+        {
+          color: markerColors[p.type] || "#21808d",
+          weight: 2,
+          opacity: 0.65,
+          dashArray: "5,7"
+        }
+      );
+      line.addTo(linesLayer);
+    });
+  }
+
+  function getVisiblePoints() {
+    const all = [origin, ...pois];
+    if (activeFilter === "all") return all;
+    return all.filter(p => p.type === activeFilter || p.id === "origin");
+  }
+
+  function updateVisibility() {
+    const visibleIds = new Set(getVisiblePoints().map(p => p.id));
+
+    [origin, ...pois].forEach(p => {
+      const shouldShow = visibleIds.has(p.id);
+      if (shouldShow) {
+        if (!map.hasLayer(markers[p.id])) markers[p.id].addTo(map);
+      } else {
+        if (map.hasLayer(markers[p.id])) map.removeLayer(markers[p.id]);
+      }
+    });
+
+    redrawLines();
+
+    // Fit bounds to visible
+    const vis = getVisiblePoints();
+    if (vis.length > 0) {
+      const group = L.featureGroup(vis.map(p => markers[p.id]).filter(m => map.hasLayer(m)));
+      if (group.getLayers().length > 0) map.fitBounds(group.getBounds().pad(0.18));
+    }
+  }
+
+  // --- Filters ---
+  function renderFilters() {
+    const bar = document.getElementById("filterBar");
+    bar.innerHTML = "";
+    categories.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.className = "filter-btn" + (activeFilter === cat.key ? " active" : "");
+      btn.textContent = cat.emoji + " " + cat.label;
+      btn.setAttribute("aria-label", "Filtr: " + cat.label);
+      btn.addEventListener("click", () => {
+        activeFilter = cat.key;
+        selectedId = "origin";
+        renderFilters();
+        renderList();
+        updateVisibility();
+      });
+      bar.appendChild(btn);
+    });
+  }
+
+  // --- List ---
+  function linkDetails(p) {
+    const off = safeUrl(p.officialUrl);
+    const oth = safeUrl(p.otherUrl);
+    const offLabel = p.officialLabel || "Oficiální";
+    const othLabel = p.otherLabel || "Další info";
+    if (!off && !oth) return "";
+
+    const offHtml = off ? `<a href="${off}" target="_blank" rel="noopener noreferrer">🔗 ${offLabel}</a>` : "";
+    const othHtml = oth ? `<a href="${oth}" target="_blank" rel="noopener noreferrer">👥 ${othLabel}</a>` : "";
+
+    return `
+      <details class="links" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();">
+        <summary>Odkazy</summary>
+        <div class="links-inner">
+          ${offHtml}
+          ${othHtml}
+        </div>
+      </details>
+    `;
+  }
+
+  function renderList() {
+    const list = document.getElementById("poiList");
+    list.innerHTML = "";
+
+    const points = getVisiblePoints();
+    points.forEach(p => {
+      const km = computeKmTo(p);
+      const dist = (p.id === "origin") ? "📍 Start" : `🚗 cca ${km} km`;
+
+      const item = document.createElement("div");
+      item.className = "poi-item" + (selectedId === p.id ? " selected" : "");
+      item.id = "poi-" + p.id;
+      item.setAttribute("role", "button");
+      item.setAttribute("tabindex", "0");
+      item.setAttribute("aria-label", p.name);
+
+      item.innerHTML = `
+        <div class="poi-emoji">${p.emoji}</div>
+        <div class="poi-info">
+          <div class="poi-name">${p.name}</div>
+          <div class="poi-desc">${p.desc}</div>
+          <div class="poi-meta">
+            <span class="poi-badge badge-distance">${dist}</span>
+            <span class="poi-badge">${p.category}</span>
+          </div>
+          ${linkDetails(p)}
+        </div>
+      `;
+
+      const go = () => {
+        selectedId = p.id;
+        renderList();
+        map.flyTo([p.lat, p.lon], p.id === "origin" ? 13 : 12, { duration: 0.8 });
+        markers[p.id].openPopup();
+      };
+
+      item.addEventListener("click", go);
+      item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          go();
+        }
+      });
+
+      list.appendChild(item);
+    });
+  }
+
+  // --- Geocoding for origin (Nominatim) ---
+  async function geocodeOrigin() {
+    const status = document.getElementById("originStatus");
+    const addr = document.getElementById("originAddress").value.trim();
+    if (!addr) return;
+
+    status.textContent = "Hledám adresu na mapě…";
+
+    try {
+      const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(addr);
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (!res.ok) throw new Error("HTTP " + res.status);
+
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        status.textContent = "Adresa nebyla nalezena. Používám orientační polohu.";
+        return;
+      }
+
+      const hit = data[0];
+      const lat = parseFloat(hit.lat);
+      const lon = parseFloat(hit.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error("Invalid coordinates");
+
+      origin.lat = lat;
+      origin.lon = lon;
+      origin.address = addr;
+
+      addOrUpdateMarker(origin);
+      updateVisibility();
+      status.textContent = "OK: hotel byl nalezen a nastaven jako výchozí bod. (Vzdálenosti jsou orientační přímkou.)";
+    } catch (e) {
+      status.textContent = "Geokódování se nepodařilo. Používám orientační polohu.";
+    }
+  }
+
+  // --- Buttons ---
+  document.getElementById("btnGeocode").addEventListener("click", geocodeOrigin);
+  document.getElementById("btnCenter").addEventListener("click", () => {
+    map.flyTo([origin.lat, origin.lon], 12, { duration: 0.8 });
+    markers[origin.id].openPopup();
+    selectedId = origin.id;
+    renderList();
+  });
+
+  // --- Init ---
+  renderFilters();
+  renderList();
+  updateVisibility();
+
+  // Pokus o automatické geokódování na startu:
+  geocodeOrigin();
+</script>
+</body>
+</html>
